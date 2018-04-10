@@ -218,7 +218,7 @@ class HomeyMiFlora extends Homey.App {
         this._sensorChanged.register();
     }
 
-    _getThresholdMapping(){
+    _getThresholdMapping() {
         return {
             "measure_temperature": {
                 "min": "measure_temperature_min",
@@ -292,6 +292,7 @@ class HomeyMiFlora extends Homey.App {
                     .then((device) => {
                         return this._updateDeviceCharacteristicData(device);
                     }).catch(error => {
+                    this._disconnect(device);
                     reject(error);
                 })
                     .then((device) => {
