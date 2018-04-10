@@ -616,7 +616,7 @@
                 ]
             },
             {
-                "id": "device_sensor_changed",
+                "id": "mi_flora_sensor_changed",
                 "title": {
                     "en": "A sensor value is changed",
                     "nl": "Een sensor waarde is veranderd"
@@ -650,6 +650,44 @@
                         "name": "device",
                         "type": "device",
                         "filter": "driver_id=mi_flora"
+                    }
+                ]
+            },
+            {
+                "id": "mi_flora_pot_changed",
+                "title": {
+                    "en": "A sensor value is changed",
+                    "nl": "Een sensor waarde is veranderd"
+                },
+                "tokens": [
+                    {
+                        "name": "value",
+                        "title": {
+                            "en": "value",
+                            "nl": "waarde"
+                        },
+                        "example": {
+                            "en": "22.5",
+                            "nl": "22.5"
+                        }
+                    },
+                    {
+                        "name": "sensor",
+                        "title": {
+                            "en": "sensor",
+                            "nl": "sensor"
+                        },
+                        "example": {
+                            "en": "measure_temperature",
+                            "nl": "measure_temperature"
+                        }
+                    }
+                ],
+                "args": [
+                    {
+                        "name": "device",
+                        "type": "device",
+                        "filter": "driver_id=mi_flora_pot"
                     }
                 ]
             }

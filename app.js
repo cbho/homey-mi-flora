@@ -60,6 +60,147 @@ class HomeyMiFlora extends Homey.App {
 
     onInit() {
         console.log('Successfully init HomeyMiFlora');
+        this._registerTriggerCards();
+        this._registerConditionalCards();
+    }
+
+    getCapabilities() {
+        return [
+            "measure_temperature",
+            "measure_luminance",
+            "measure_conductivity",
+            "measure_moisture",
+            "measure_battery"
+        ];
+    }
+
+    updateDevices(devices) {
+        return devices.reduce((promise, device) => {
+            return promise
+                .then(() => {
+                    device.retry = 0;
+                    return this._updateDevice(device);
+                }).catch(error => {
+                    console.log(error);
+                });
+        }, Promise.resolve());
+    }
+
+    triggerCapabilityChange(device, capability, value) {
+
+        let thresholdMapping = this._getThresholdMapping();
+
+        if (thresholdMapping.hasOwnProperty(capability)) {
+            let minValue = device.getSetting(thresholdMapping[capability].min);
+            if (value < minValue) {
+                console.log('trigger _checkMinThreshold');
+                this._deviceSensorThresholdMinExceeds.trigger({
+                    'device': device.getName(),
+                    'sensor': capability,
+                    'value': '' + value
+                })
+                    .catch(function (error) {
+                        console.error('Cannot trigger flow card sensor_threshold_min_exceeds: %s.', error);
+                    });
+            }
+        }
+
+        if (thresholdMapping.hasOwnProperty(capability)) {
+            let maxValue = device.getSetting(thresholdMapping[capability].max);
+            if (value > maxValue) {
+                console.log('trigger _checkMaxThreshold');
+                this._deviceSensorThresholdMaxExceeds.trigger({
+                    'device': device.getName(),
+                    'sensor': capability,
+                    'value': '' + value
+                })
+                    .catch(function (error) {
+                        console.error('Cannot trigger flow card sensor_threshold_max_exceeds: %s.', error);
+                    });
+            }
+        }
+
+        this._sensorChanged.trigger({
+            'device': device.getName(),
+            'sensor': capability,
+            'value': '' + value
+        })
+            .catch(function (error) {
+                console.error('Cannot trigger flow card sensor_changed device: %s.', error);
+            });
+
+        this._deviceSensorChanged.trigger({
+            'sensor': capability,
+            'value': '' + value
+        })
+            .catch(function (error) {
+                console.error('Cannot trigger flow card sensor_changed device: %s.', error);
+            });
+    }
+
+    _registerConditionalCards() {
+
+        let conditionsMapping = {
+            "measure_temperature": "measure_temperature_threshold",
+            "measure_luminance": "measure_luminance_threshold",
+            "measure_conductivity": "measure_conductivity_threshold",
+            "measure_moisture": "measure_moisture_threshold"
+        };
+
+        this.getCapabilities().forEach(function (capability) {
+            if (conditionsMapping.hasOwnProperty(capability)) {
+                new Homey.FlowCardCondition(conditionsMapping[capability])
+                    .register()
+                    .registerRunListener((args, state) => {
+
+                        let minValue = args.device.getSetting(thresholdMapping[capability].min);
+                        let maxValue = args.device.getSetting(thresholdMapping[capability].max);
+                        let value = args.device.getCapabilityValue(capability);
+
+                        console.log("%s < %s || %s > %s", value, minValue, value, maxValue);
+
+                        return (value < minValue || value > maxValue);
+                    });
+            }
+        });
+    }
+
+    // registerDeviceTriggerCards(device) {
+    //     console.log(device.getDeviceTriggerCardId() + '_changed');
+    //     this._deviceSensorChanged = new Homey.FlowCardTriggerDevice(device.getDeviceTriggerCardId() + '_changed');
+    //     this._deviceSensorChanged.register();
+    // }
+
+    _registerTriggerCards() {
+        this._deviceSensorThresholdMinExceeds = new Homey.FlowCardTrigger('sensor_threshold_min_exceeds');
+        this._deviceSensorThresholdMinExceeds.register();
+
+        this._deviceSensorThresholdMaxExceeds = new Homey.FlowCardTrigger('sensor_threshold_max_exceeds');
+        this._deviceSensorThresholdMaxExceeds.register();
+
+        this._sensorChanged = new Homey.FlowCardTrigger('sensor_changed');
+        this._sensorChanged.register();
+    }
+
+    _getThresholdMapping(){
+        return {
+            "measure_temperature": {
+                "min": "measure_temperature_min",
+                "max": "measure_temperature_max"
+            },
+            "measure_luminance": {
+                "min": "measure_luminance_min",
+                "max": "measure_luminance_max"
+            },
+            "measure_conductivity": {
+                "min": "measure_conductivity_min",
+                "max": "measure_conductivity_max"
+            },
+            "measure_moisture": {
+                "min": "measure_moisture_min",
+                "max": "measure_moisture_max"
+            },
+        };
     }
 
     _updateDevice(device) {
@@ -82,18 +223,6 @@ class HomeyMiFlora extends Homey.App {
                     reject('Max retries exceeded, no success');
                 });
         })
-    }
-
-    _updateDevices(devices) {
-        return devices.reduce((promise, device) => {
-            return promise
-                .then(() => {
-                    device.retry = 0;
-                    return this._updateDevice(device);
-                }).catch(error => {
-                    console.log(error);
-                });
-        }, Promise.resolve());
     }
 
     _handleUpdateSequenceTest(device) {
@@ -150,34 +279,39 @@ class HomeyMiFlora extends Homey.App {
     _discover(device) {
         console.log('Discover');
         return new Promise((resolve, reject) => {
-            if (device) {
-                if (device.advertisement) {
-                    console.log('Already found');
-                    resolve(device);
-                }
-                Homey.ManagerBLE.discover().then(function (advertisements) {
-                    if (advertisements) {
+            try {
+                if (device) {
+                    if (device.advertisement) {
+                        console.log('Already found');
+                        resolve(device);
+                    }
+                    Homey.ManagerBLE.discover().then(function (advertisements) {
+                        if (advertisements) {
 
-                        let matched = advertisements.filter(function (advertisement) {
-                            return (advertisement.uuid === device.getData().uuid);
-                        });
+                            let matched = advertisements.filter(function (advertisement) {
+                                return (advertisement.uuid === device.getData().uuid);
+                            });
 
-                        if (matched.length === 1) {
-                            device.advertisement = matched[0];
+                            if (matched.length === 1) {
+                                device.advertisement = matched[0];
 
-                            resolve(device);
+                                resolve(device);
+                            }
+                            else {
+                                reject("Cannot find advertisement with uuid " + device.getData().uuid);
+                            }
                         }
                         else {
-                            reject("Cannot find advertisement with uuid " + device.getData().uuid);
+                            reject("Cannot find any advertisements");
                         }
-                    }
-                    else {
-                        reject("Cannot find any advertisements");
-                    }
-                });
+                    });
+                }
+                else {
+                    reject("No device found");
+                }
             }
-            else {
-                reject("No device found");
+            catch (error) {
+                reject(error);
             }
         });
     }

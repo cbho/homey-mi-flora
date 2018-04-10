@@ -2,7 +2,7 @@
 
 const MiFloraDriver = require('../../lib/MiFloraDriver.js');
 
-class MiFloraSensorDriver extends MiFloraDriver {
+class MiFloraPotDriver extends MiFloraDriver {
     getMiFloraBleIdentification() {
         return 'ropot';
     }
@@ -12,4 +12,4 @@ class MiFloraSensorDriver extends MiFloraDriver {
     }
 }
 
-module.exports = MiFloraSensorDriver;
+module.exports = MiFloraPotDriver;

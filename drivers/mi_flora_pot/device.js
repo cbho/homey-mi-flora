@@ -2,7 +2,10 @@
 
 const MiFloraDevice = require('../../lib/MiFloraDevice.js');
 
-class MiFloraSensor extends MiFloraDevice {
+class MiFloraPot extends MiFloraDevice {
+    getDeviceTriggerCardId() {
+        return 'mi_flora_pot';
+    }
 }
 
-module.exports = MiFloraSensor;
+module.exports = MiFloraPot;
