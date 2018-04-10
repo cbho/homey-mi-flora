@@ -129,13 +129,49 @@ class HomeyMiFlora extends Homey.App {
                 console.error('Cannot trigger flow card sensor_changed device: %s.', error);
             });
 
-        this._deviceSensorChanged.trigger({
-            'sensor': capability,
-            'value': '' + value
+        // this._deviceSensorChanged.trigger({
+        //     'sensor': capability,
+        //     'value': '' + value
+        // })
+        //     .catch(function (error) {
+        //         console.error('Cannot trigger flow card sensor_changed device: %s.', error);
+        //     });
+    }
+
+    findDevices(identification, name) {
+        return new Promise((resolve, reject) => {
+            let devices = [];
+            let index = 0;
+            Homey.ManagerBLE.discover().then(function (advertisements) {
+                advertisements.forEach(function (advertisement) {
+                    if (advertisement.localName === identification) {
+                        ++index;
+                        devices.push({
+                            "name": name + " " + index,
+                            "data": {
+                                "id": advertisement.id,
+                                "uuid": advertisement.uuid,
+                                "name": advertisement.name,
+                                "type": advertisement.type,
+                                "version": APP_VERSION,
+                            },
+                            "capabilities": [
+                                "measure_temperature",
+                                "measure_luminance",
+                                "measure_conductivity",
+                                "measure_moisture",
+                                "measure_battery"
+                            ],
+                        });
+                    }
+                });
+
+                resolve(devices);
+            })
+                .catch(function (error) {
+                    reject('Cannot discover BLE devices from the homey manager. ' + error);
+                });
         })
-            .catch(function (error) {
-                console.error('Cannot trigger flow card sensor_changed device: %s.', error);
-            });
     }
 
     _registerConditionalCards() {
@@ -480,42 +516,6 @@ class HomeyMiFlora extends Homey.App {
                 reject(error);
             }
         });
-    }
-
-    getDevices(identification, name) {
-        return new Promise((resolve, reject) => {
-            let devices = [];
-            let index = 0;
-            Homey.ManagerBLE.discover().then(function (advertisements) {
-                advertisements.forEach(function (advertisement) {
-                    if (advertisement.localName === identification) {
-                        ++index;
-                        devices.push({
-                            "name": name + " " + index,
-                            "data": {
-                                "id": advertisement.id,
-                                "uuid": advertisement.uuid,
-                                "name": advertisement.name,
-                                "type": advertisement.type,
-                                "version": APP_VERSION,
-                            },
-                            "capabilities": [
-                                "measure_temperature",
-                                "measure_luminance",
-                                "measure_conductivity",
-                                "measure_moisture",
-                                "measure_battery"
-                            ],
-                        });
-                    }
-                });
-
-                resolve(devices);
-            })
-                .catch(function (error) {
-                    reject('Cannot discover BLE devices from the homey manager. ' + error);
-                });
-        })
     }
 }
 
